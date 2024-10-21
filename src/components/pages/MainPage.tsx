@@ -1,6 +1,12 @@
 "use client"
 
+import Image from "next/image"
 import { useState } from "react"
+import { Star } from "lucide-react"
+import { Movie } from "@/types/tmdb"
+import { describeMovie } from "@/services/gemini"
+import { searchMovies } from "@/services/tmdb"
+
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,68 +18,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Star } from "lucide-react"
-
-interface Mock {
-  id: number
-  title: string
-  overview: string
-  poster_path: string
-  release_date: string
-  vote_average: number
-}
-
-// Mock data from the provided snippet
-const mockMovies: Mock[] = [
-  {
-    id: 957452,
-    title: "The Crow",
-    overview: "Soulmates Eric and Shelly are brutally murdered when the demons of her dark past catch up with them. Given the chance to save his true love by sacrificing himself, Eric sets out to seek merciless revenge on their killers, traversing the worlds of the living and the dead to put the wrong things right.",
-    poster_path: "/58QT4cPJ2u2TqWZkterDq9q4yxQ.jpg",
-    release_date: "2024-08-21",
-    vote_average: 5.4,
-  },
-  {
-    id: 1215162,
-    title: "Kill 'em All 2",
-    overview: "Phillip and Suzanne are retired from the spy game, living peacefully off the grid. That's until their whereabouts are discovered by Vlad, the vengeful brother of their target from the first film.",
-    poster_path: "/hgA5hN3NjNNSTXYOmAI6KNKOzbp.jpg",
-    release_date: "2024-09-24",
-    vote_average: 7.186,
-  },
-  {
-    id: 933260,
-    title: "The Substance",
-    overview: "A fading celebrity decides to use a black market drug, a cell-replicating substance that temporarily creates a younger, better version of herself.",
-    poster_path: "/lqoMzCcZYEFK729d6qzt349fB4o.jpg",
-    release_date: "2024-09-07",
-    vote_average: 7.269,
-  },
-  {
-    id: 1079091,
-    title: "It Ends with Us",
-    overview: "When a woman's first love suddenly reenters her life, her relationship with a charming, but abusive neurosurgeon is upended, and she realizes she must learn to rely on her own strength to make an impossible choice for her future.",
-    poster_path: "/cSMdFWmajaX4oUMLx7HEDI84GkP.jpg",
-    release_date: "2024-08-07",
-    vote_average: 6.92,
-  },
-  {
-    id: 917496,
-    title: "Beetlejuice Beetlejuice",
-    overview: "After a family tragedy, three generations of the Deetz family return home to Winter River. Still haunted by Betelgeuse, Lydia's life is turned upside down when her teenage daughter, Astrid, accidentally opens the portal to the Afterlife.",
-    poster_path: "/kKgQzkUCnQmeTPkyIwHly2t6ZFI.jpg",
-    release_date: "2024-09-04",
-    vote_average: 7.156,
-  },
-]
 
 export default function MainPage() {
-  const [searchResults, setSearchResults] = useState<Mock[]>([])
+  const [searchResults, setSearchResults] = useState<Movie[]>([])
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // Simulating API call with mock data
-    setSearchResults(mockMovies)
+    const input = e.currentTarget.querySelector("input")?.value
+    if (!input) return
+
+    try {
+      const descriptionResults = await describeMovie(input)
+
+      const tmdbResults = await searchMovies(descriptionResults)
+      console.log(tmdbResults)
+      setSearchResults(tmdbResults)
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   return (
@@ -101,10 +63,12 @@ export default function MainPage() {
             <DialogTrigger asChild>
               <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                 <CardContent className="p-4">
-                  <img
+                  <Image
                     src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
                     alt={movie.title}
                     className="w-full h-80 object-cover mb-4 rounded"
+                    width={500}
+                    height={281}
                   />
                   <h2 className="text-xl font-semibold">{movie.title}</h2>
                   <p className="text-gray-600">{new Date(movie.release_date).getFullYear()}</p>
@@ -116,10 +80,12 @@ export default function MainPage() {
                 <DialogTitle>{movie.title}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <img
+                <Image
                   src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
                   alt={movie.title}
                   className="w-full h-64 object-cover rounded"
+                  width={500}
+                  height={281}
                 />
                 <p className="text-sm text-gray-500">
                   Release Date: {new Date(movie.release_date).toLocaleDateString()}
